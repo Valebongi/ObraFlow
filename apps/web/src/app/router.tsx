@@ -19,8 +19,6 @@ import VehiclesPage from '@/pages/VehiclesPage';
 import MaterialsPage from '@/pages/MaterialsPage';
 import TimesheetsPage from '@/pages/TimesheetsPage';
 import ReportsPage from '@/pages/ReportsPage';
-import BillingPage from '@/pages/BillingPage';
-import UsersPage from '@/pages/UsersPage';
 import SettingsPage from '@/pages/SettingsPage';
 import PortalAccessPage from '@/pages/PortalAccessPage';
 
@@ -58,8 +56,6 @@ export const router = createBrowserRouter([
       { path: 'materials', element: <MaterialsPage /> },
       { path: 'timesheets', element: <TimesheetsPage /> },
       { path: 'reports', element: <ReportsPage /> },
-      { path: 'billing', element: <BillingPage /> },
-      { path: 'users', element: <UsersPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'portal-access', element: <PortalAccessPage /> },
     ],

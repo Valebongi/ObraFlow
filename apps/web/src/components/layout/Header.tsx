@@ -15,9 +15,7 @@ const TITLES: Record<string, string> = {
   '/clients': 'Clientes',
   '/locations': 'Ubicaciones',
   '/contracts': 'Contratos',
-  '/users': 'Usuarios',
   '/reports': 'Reportes',
-  '/billing': 'Facturación',
   '/settings': 'Configuración',
   '/portal-access': 'Portal de Clientes',
 };

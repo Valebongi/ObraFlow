@@ -10,8 +10,17 @@ import {
   TriangleAlert,
   Plus,
   Calendar,
+  CalendarDays,
+  Clock,
+  Building2,
+  MapPin,
+  FileText,
+  HardHat,
+  Briefcase,
+  Truck,
+  Package,
+  ChartColumn,
   ChevronRight,
-  TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -81,6 +90,21 @@ const STATUS_COLORS: Record<string, string> = {
   [WOStatus.INVOICED]: '#111111',
   [WOStatus.CANCELLED]: '#E53935',
 };
+
+const QUICK_LINKS: { label: string; to: string; icon: LucideIcon; color: string }[] = [
+  { label: 'Órdenes de Trabajo', to: '/work-orders', icon: ClipboardList, color: 'bg-dark text-white' },
+  { label: 'Planificación', to: '/planning', icon: CalendarDays, color: 'bg-blue-50 text-blue-600' },
+  { label: 'Parte de Horas', to: '/timesheets', icon: Clock, color: 'bg-amber-50 text-amber-600' },
+  { label: 'Clientes', to: '/clients', icon: Building2, color: 'bg-purple-50 text-purple-600' },
+  { label: 'Ubicaciones', to: '/locations', icon: MapPin, color: 'bg-rose-50 text-rose-600' },
+  { label: 'Contratos', to: '/contracts', icon: FileText, color: 'bg-slate-100 text-slate-600' },
+  { label: 'Cuadrillas', to: '/crews', icon: HardHat, color: 'bg-orange-50 text-orange-600' },
+  { label: 'Trabajadores', to: '/workers', icon: Users, color: 'bg-indigo-50 text-indigo-600' },
+  { label: 'Subcontratistas', to: '/subcontractors', icon: Briefcase, color: 'bg-teal-50 text-teal-600' },
+  { label: 'Vehículos', to: '/vehicles', icon: Truck, color: 'bg-cyan-50 text-cyan-600' },
+  { label: 'Materiales', to: '/materials', icon: Package, color: 'bg-emerald-50 text-emerald-600' },
+  { label: 'Reportes', to: '/reports', icon: ChartColumn, color: 'bg-brand-light text-brand-dark' },
+];
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -252,6 +276,29 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Quick access hub */}
+      <div className="mb-6">
+        <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">
+          Accesos rápidos
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          {QUICK_LINKS.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className="group flex flex-col items-start gap-3 rounded-xl bg-white border border-border p-4 shadow-xs transition-all hover:shadow hover:-translate-y-0.5"
+            >
+              <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${link.color}`}>
+                <link.icon className="h-5 w-5" />
+              </span>
+              <span className="text-sm font-medium text-text-primary group-hover:text-brand-dark leading-tight">
+                {link.label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Charts row */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
         {/* Monthly activity */}
@@ -411,37 +458,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-        <Link
-          to="/work-orders/create"
-          className="flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-sm transition-all hover:shadow hover:-translate-y-0.5 bg-dark text-white"
-        >
-          <Plus className="h-5 w-5" />
-          Nueva orden
-        </Link>
-        <Link
-          to="/planning"
-          className="flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-sm transition-all hover:shadow hover:-translate-y-0.5 bg-white text-text-primary border border-border"
-        >
-          <Calendar className="h-5 w-5" />
-          Ver planificación
-        </Link>
-        <Link
-          to="/clients"
-          className="flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-sm transition-all hover:shadow hover:-translate-y-0.5 bg-white text-text-primary border border-border"
-        >
-          <Wrench className="h-5 w-5" />
-          Gestionar clientes
-        </Link>
-        <Link
-          to="/reports"
-          className="flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-sm transition-all hover:shadow hover:-translate-y-0.5 bg-white text-text-primary border border-border"
-        >
-          <TrendingUp className="h-5 w-5" />
-          Ver reportes
-        </Link>
-      </div>
     </div>
   );
 }
