@@ -1,0 +1,130 @@
+import { z } from 'zod';
+import { WOStatus, WOPriority, WOType } from '../constants/enums';
+export declare const CreateWorkOrderSchema: z.ZodObject<{
+    title: z.ZodString;
+    description: z.ZodOptional<z.ZodString>;
+    priority: z.ZodDefault<z.ZodNativeEnum<typeof WOPriority>>;
+    type: z.ZodNativeEnum<typeof WOType>;
+    clientId: z.ZodOptional<z.ZodString>;
+    locationId: z.ZodOptional<z.ZodString>;
+    contractId: z.ZodOptional<z.ZodString>;
+    plannedStart: z.ZodOptional<z.ZodString>;
+    plannedEnd: z.ZodOptional<z.ZodString>;
+    estimatedHours: z.ZodOptional<z.ZodNumber>;
+    estimatedCost: z.ZodOptional<z.ZodNumber>;
+    notes: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    type: WOType;
+    title: string;
+    priority: WOPriority;
+    description?: string | undefined;
+    clientId?: string | undefined;
+    locationId?: string | undefined;
+    contractId?: string | undefined;
+    plannedStart?: string | undefined;
+    plannedEnd?: string | undefined;
+    estimatedHours?: number | undefined;
+    estimatedCost?: number | undefined;
+    notes?: string | undefined;
+}, {
+    type: WOType;
+    title: string;
+    description?: string | undefined;
+    priority?: WOPriority | undefined;
+    clientId?: string | undefined;
+    locationId?: string | undefined;
+    contractId?: string | undefined;
+    plannedStart?: string | undefined;
+    plannedEnd?: string | undefined;
+    estimatedHours?: number | undefined;
+    estimatedCost?: number | undefined;
+    notes?: string | undefined;
+}>;
+export declare const UpdateWorkOrderSchema: z.ZodObject<{
+    title: z.ZodOptional<z.ZodString>;
+    description: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    priority: z.ZodOptional<z.ZodDefault<z.ZodNativeEnum<typeof WOPriority>>>;
+    type: z.ZodOptional<z.ZodNativeEnum<typeof WOType>>;
+    clientId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    locationId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    contractId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    plannedStart: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    plannedEnd: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    estimatedHours: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
+    estimatedCost: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
+    notes: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+}, "strip", z.ZodTypeAny, {
+    type?: WOType | undefined;
+    description?: string | undefined;
+    title?: string | undefined;
+    priority?: WOPriority | undefined;
+    clientId?: string | undefined;
+    locationId?: string | undefined;
+    contractId?: string | undefined;
+    plannedStart?: string | undefined;
+    plannedEnd?: string | undefined;
+    estimatedHours?: number | undefined;
+    estimatedCost?: number | undefined;
+    notes?: string | undefined;
+}, {
+    type?: WOType | undefined;
+    description?: string | undefined;
+    title?: string | undefined;
+    priority?: WOPriority | undefined;
+    clientId?: string | undefined;
+    locationId?: string | undefined;
+    contractId?: string | undefined;
+    plannedStart?: string | undefined;
+    plannedEnd?: string | undefined;
+    estimatedHours?: number | undefined;
+    estimatedCost?: number | undefined;
+    notes?: string | undefined;
+}>;
+export declare const ChangeWOStatusSchema: z.ZodObject<{
+    status: z.ZodNativeEnum<typeof WOStatus>;
+    reason: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    status: WOStatus;
+    reason?: string | undefined;
+}, {
+    status: WOStatus;
+    reason?: string | undefined;
+}>;
+export declare const WorkOrderFiltersSchema: z.ZodObject<{
+    page: z.ZodDefault<z.ZodNumber>;
+    limit: z.ZodDefault<z.ZodNumber>;
+    status: z.ZodOptional<z.ZodNativeEnum<typeof WOStatus>>;
+    priority: z.ZodOptional<z.ZodNativeEnum<typeof WOPriority>>;
+    type: z.ZodOptional<z.ZodNativeEnum<typeof WOType>>;
+    clientId: z.ZodOptional<z.ZodString>;
+    crewId: z.ZodOptional<z.ZodString>;
+    from: z.ZodOptional<z.ZodString>;
+    to: z.ZodOptional<z.ZodString>;
+    search: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    page: number;
+    limit: number;
+    search?: string | undefined;
+    type?: WOType | undefined;
+    status?: WOStatus | undefined;
+    priority?: WOPriority | undefined;
+    clientId?: string | undefined;
+    crewId?: string | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+}, {
+    search?: string | undefined;
+    type?: WOType | undefined;
+    status?: WOStatus | undefined;
+    priority?: WOPriority | undefined;
+    clientId?: string | undefined;
+    page?: number | undefined;
+    limit?: number | undefined;
+    crewId?: string | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+}>;
+export type CreateWorkOrderDto = z.infer<typeof CreateWorkOrderSchema>;
+export type UpdateWorkOrderDto = z.infer<typeof UpdateWorkOrderSchema>;
+export type ChangeWOStatusDto = z.infer<typeof ChangeWOStatusSchema>;
+export type WorkOrderFiltersDto = z.infer<typeof WorkOrderFiltersSchema>;

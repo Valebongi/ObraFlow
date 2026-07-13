@@ -1,0 +1,499 @@
+// â”€â”€â”€ ObraFlow â€” Prisma Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Development: SQLite | Production: PostgreSQL 18
+// Switch DATABASE_URL in .env to migrate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// â”€â”€â”€ Organization (Tenant) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("STARTER")
+  logoUrl   String?
+  timezone  String   @default("America/Santiago")
+  currency  String   @default("CLP")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  clients        Client[]
+  locations      Location[]
+  contracts      Contract[]
+  crews          Crew[]
+  workers        Worker[]
+  vehicles       Vehicle[]
+  subcontractors Subcontractor[]
+  materials      Material[]
+  workOrders     WorkOrder[]
+  refreshTokens  RefreshToken[]
+  clientUsers    ClientUser[]
+  subscription   Subscription?
+
+  @@map("organizations")
+}
+
+// â”€â”€â”€ User â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model User {
+  id           String    @id @default(uuid())
+  email        String
+  name         String
+  passwordHash String
+  role         String    @default("VIEWER")
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  orgId        String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org           Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+  createdWOs    WorkOrder[]    @relation("CreatedBy")
+  assignedCrew  Crew?          @relation("CrewLeader")
+
+  @@unique([email, orgId])
+  @@index([orgId])
+  @@map("users")
+}
+
+// â”€â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  orgId     String
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([orgId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+// â”€â”€â”€ Client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  taxId     String?
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  orgId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  locations   Location[]
+  contracts   Contract[]
+  workOrders  WorkOrder[]
+  clientUsers ClientUser[]
+
+  @@index([orgId])
+  @@map("clients")
+}
+
+// â”€â”€â”€ Location â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  lat       Float?
+  lng       Float?
+  notes     String?
+  clientId  String?
+  orgId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client     Client?      @relation(fields: [clientId], references: [id])
+  workOrders WorkOrder[]
+
+  @@index([orgId])
+  @@map("locations")
+}
+
+// â”€â”€â”€ Contract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Contract {
+  id          String    @id @default(uuid())
+  name        String
+  code        String?
+  clientId    String
+  startDate   DateTime?
+  endDate     DateTime?
+  value       Float?
+  description String?
+  isActive    Boolean   @default(true)
+  orgId       String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client     Client       @relation(fields: [clientId], references: [id])
+  workOrders WorkOrder[]
+
+  @@index([orgId])
+  @@map("contracts")
+}
+
+// â”€â”€â”€ Crew â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Crew {
+  id         String   @id @default(uuid())
+  name       String
+  code       String
+  type       String   @default("OWN")
+  status     String   @default("AVAILABLE")
+  leaderId   String?  @unique
+  vehicleId  String?
+  notes      String?
+  orgId      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leader        User?         @relation("CrewLeader", fields: [leaderId], references: [id])
+  vehicle       Vehicle?      @relation(fields: [vehicleId], references: [id])
+  workers       Worker[]
+  workOrders    WorkOrder[]
+  subcontractor Subcontractor?
+
+  @@unique([code, orgId])
+  @@index([orgId])
+  @@map("crews")
+}
+
+// â”€â”€â”€ Worker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Worker {
+  id         String   @id @default(uuid())
+  name       String
+  rut        String?
+  role       String?
+  phone      String?
+  email      String?
+  hourlyRate Float?
+  status     String   @default("ACTIVE")
+  crewId     String?
+  orgId      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  crew       Crew?        @relation(fields: [crewId], references: [id])
+  timesheets Timesheet[]
+
+  @@index([orgId])
+  @@index([crewId])
+  @@map("workers")
+}
+
+// â”€â”€â”€ Vehicle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Vehicle {
+  id           String   @id @default(uuid())
+  plate        String
+  brand        String?
+  model        String?
+  year         Int?
+  status       String   @default("AVAILABLE")
+  notes        String?
+  orgId        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  crews Crew[]
+
+  @@unique([plate, orgId])
+  @@index([orgId])
+  @@map("vehicles")
+}
+
+// â”€â”€â”€ Subcontractor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Subcontractor {
+  id        String   @id @default(uuid())
+  name      String
+  taxId     String?
+  email     String?
+  phone     String?
+  rateModel String   @default("PER_OT")
+  rateValue Float    @default(0)
+  crewId    String?  @unique
+  orgId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  crew Crew?        @relation(fields: [crewId], references: [id])
+
+  @@index([orgId])
+  @@map("subcontractors")
+}
+
+// â”€â”€â”€ Material â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Material {
+  id          String   @id @default(uuid())
+  name        String
+  code        String?
+  unit        String   @default("UN")
+  unitCost    Float    @default(0)
+  stockMin    Float    @default(0)
+  stockTotal  Float    @default(0)
+  description String?
+  orgId       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org              Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  inventoryMovements InventoryMovement[]
+  wOMaterials      WOMaterial[]
+
+  @@unique([code, orgId])
+  @@index([orgId])
+  @@map("materials")
+}
+
+// â”€â”€â”€ Work Order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model WorkOrder {
+  id              String    @id @default(uuid())
+  code            String
+  title           String
+  description     String?
+  status          String    @default("PENDING")
+  priority        String    @default("MEDIUM")
+  type            String    @default("CORRECTIVE")
+  clientId        String?
+  locationId      String?
+  contractId      String?
+  crewId          String?
+  plannedStart    DateTime?
+  plannedEnd      DateTime?
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  estimatedHours  Float?
+  estimatedCost   Float?
+  costHH          Float     @default(0)
+  costMaterials   Float     @default(0)
+  costSubcontract Float     @default(0)
+  costExtra       Float     @default(0)
+  costTotal       Float     @default(0)
+  notes           String?
+  closedAt        DateTime?
+  orgId           String
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org        Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client     Client?            @relation(fields: [clientId], references: [id])
+  location   Location?          @relation(fields: [locationId], references: [id])
+  contract   Contract?          @relation(fields: [contractId], references: [id])
+  crew       Crew?              @relation(fields: [crewId], references: [id])
+  createdBy  User?              @relation("CreatedBy", fields: [createdById], references: [id])
+  statusLogs WOStatusLog[]
+  timesheets Timesheet[]
+  materials  WOMaterial[]
+  incidents  Incident[]
+  evidences  Evidence[]
+
+  @@unique([code, orgId])
+  @@index([orgId])
+  @@index([orgId, status])
+  @@index([orgId, createdAt])
+  @@map("work_orders")
+}
+
+// â”€â”€â”€ WO Status Log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model WOStatusLog {
+  id          String   @id @default(uuid())
+  workOrderId String
+  fromStatus  String?
+  toStatus    String
+  reason      String?
+  changedById String?
+  changedAt   DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("wo_status_logs")
+}
+
+// â”€â”€â”€ Timesheet (HH) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Timesheet {
+  id          String   @id @default(uuid())
+  workOrderId String
+  workerId    String
+  date        DateTime
+  hoursNormal Float    @default(0)
+  hoursExtra  Float    @default(0)
+  hourlyRate  Float    @default(0)
+  totalCost   Float    @default(0)
+  notes       String?
+  orgId       String
+  createdAt   DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  worker    Worker    @relation(fields: [workerId], references: [id])
+
+  @@index([workOrderId])
+  @@index([orgId])
+  @@map("timesheets")
+}
+
+// â”€â”€â”€ WO Material â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model WOMaterial {
+  id          String   @id @default(uuid())
+  workOrderId String
+  materialId  String
+  quantity    Float
+  unitCost    Float
+  totalCost   Float
+  notes       String?
+  registeredAt DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  material  Material  @relation(fields: [materialId], references: [id])
+
+  @@index([workOrderId])
+  @@map("wo_materials")
+}
+
+model InventoryMovement {
+  id         String   @id @default(uuid())
+  materialId String
+  type       String
+  quantity   Float
+  reason     String?
+  reference  String?
+  orgId      String
+  createdAt  DateTime @default(now())
+
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@index([materialId])
+  @@index([orgId])
+  @@map("inventory_movements")
+}
+
+// â”€â”€â”€ Evidence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Evidence {
+  id          String   @id @default(uuid())
+  workOrderId String
+  type        String
+  url         String
+  description String?
+  takenAt     DateTime @default(now())
+  uploadedById String?
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("evidences")
+}
+
+// â”€â”€â”€ Client Portal User â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model ClientUser {
+  id           String    @id @default(uuid())
+  email        String
+  passwordHash String
+  clientId     String
+  orgId        String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([email, orgId])
+  @@index([orgId])
+  @@index([clientId])
+  @@map("client_users")
+}
+
+// â”€â”€â”€ Subscription (Stripe) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Subscription {
+  id                   String    @id @default(uuid())
+  orgId                String    @unique
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  plan                 String    @default("STARTER")
+  status               String    @default("ACTIVE")
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@map("subscriptions")
+}
+
+// â”€â”€â”€ Incident â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Incident {
+  id          String   @id @default(uuid())
+  workOrderId String
+  type        String
+  description String
+  severity    String   @default("LOW")
+  reportedAt  DateTime @default(now())
+  reportedById String?
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("incidents")
+}
+
