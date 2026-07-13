@@ -28,7 +28,9 @@ COPY apps/web ./apps/web
 
 # Generate Prisma client, then build shared + api + web.
 # The web app (Vite) builds into apps/api/public, which the API serves statically.
-RUN npx --workspace @obraflow/api prisma generate --schema apps/api/prisma/schema.prisma
+# Invoke the hoisted Prisma binary directly from the repo root so the schema path
+# resolves correctly and the pinned v6 is used (not whatever npx would fetch).
+RUN node node_modules/prisma/build/index.js generate --schema apps/api/prisma/schema.prisma
 RUN npm run build
 
 # ---- Stage 2: runtime ----------------------------------------------
