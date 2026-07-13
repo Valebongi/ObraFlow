@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { WOType, WOPriority } from '@obraflow/shared';
 import { api, apiErrorMessage } from '@/lib/api';
 import { WO_TYPE_LABEL, WO_PRIORITY_LABEL } from '@/lib/labels';
@@ -9,6 +9,57 @@ import { Button } from '@/components/ui/Button';
 interface Option {
   id: string;
   name: string;
+}
+
+// Draft autosave: the form is persisted to localStorage as you type, so you can
+// leave to create a missing referenced record (client, crew, ...) and come back
+// without losing what you already entered.
+const DRAFT_KEY = 'obraflow:wo-create-draft';
+
+interface WOForm {
+  title: string;
+  type: WOType;
+  priority: WOPriority;
+  description: string;
+  clientId: string;
+  crewId: string;
+  locationId: string;
+  contractId: string;
+  plannedStart: string;
+  plannedEnd: string;
+  estimatedHours: string;
+  estimatedCost: string;
+  notes: string;
+}
+
+const DEFAULT_FORM: WOForm = {
+  title: '',
+  type: WOType.CORRECTIVE,
+  priority: WOPriority.MEDIUM,
+  description: '',
+  clientId: '',
+  crewId: '',
+  locationId: '',
+  contractId: '',
+  plannedStart: '',
+  plannedEnd: '',
+  estimatedHours: '',
+  estimatedCost: '',
+  notes: '',
+};
+
+function loadDraft(): WOForm | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return { ...DEFAULT_FORM, ...(JSON.parse(raw) as Partial<WOForm>) };
+  } catch {
+    return null;
+  }
+}
+
+function isDirty(f: WOForm): boolean {
+  return JSON.stringify(f) !== JSON.stringify(DEFAULT_FORM);
 }
 
 const inputClass =
@@ -20,21 +71,38 @@ const selectClass =
 function FieldWrap({
   label,
   htmlFor,
+  action,
   children,
 }: {
   label?: string;
   htmlFor?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={htmlFor} className="text-sm font-medium text-text-primary">
-          {label}
-        </label>
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor={htmlFor} className="text-sm font-medium text-text-primary">
+            {label}
+          </label>
+          {action}
+        </div>
       )}
       {children}
     </div>
+  );
+}
+
+function CreateLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center gap-1 text-xs font-medium text-brand-dark hover:underline"
+    >
+      <Plus className="h-3 w-3" />
+      {children}
+    </Link>
   );
 }
 
@@ -57,24 +125,27 @@ export default function WorkOrderCreatePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const [form, setForm] = useState({
-    title: '',
-    type: WOType.CORRECTIVE as WOType,
-    priority: WOPriority.MEDIUM as WOPriority,
-    description: '',
-    clientId: '',
-    crewId: '',
-    locationId: '',
-    contractId: '',
-    plannedStart: '',
-    plannedEnd: '',
-    estimatedHours: '',
-    estimatedCost: '',
-    notes: '',
-  });
+  const [form, setForm] = useState<WOForm>(() => loadDraft() ?? DEFAULT_FORM);
+  const [restored, setRestored] = useState(() => loadDraft() !== null);
 
-  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+  function set<K extends keyof WOForm>(key: K, value: WOForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  // Autosave the draft whenever the form changes (and clear it when empty).
+  useEffect(() => {
+    if (isDirty(form)) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+    } else {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, [form]);
+
+  function discardDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+    setForm(DEFAULT_FORM);
+    setRestored(false);
+    setError('');
   }
 
   useEffect(() => {
@@ -118,6 +189,7 @@ export default function WorkOrderCreatePage() {
         ...(form.notes.trim() && { notes: form.notes.trim() }),
       };
       const { data } = await api.post('/work-orders', payload);
+      localStorage.removeItem(DRAFT_KEY);
       navigate(data?.id ? `/work-orders/${data.id}` : '/work-orders');
     } catch (err) {
       setError(apiErrorMessage(err, 'No se pudo crear la orden de trabajo'));
@@ -142,6 +214,21 @@ export default function WorkOrderCreatePage() {
             <p className="text-sm text-text-muted mt-0.5">Completá los datos para crear la orden</p>
           </div>
         </div>
+
+        {restored && (
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-brand/40 bg-brand-light px-4 py-3">
+            <p className="text-sm text-brand-dark">
+              Retomaste un borrador guardado — seguí donde lo dejaste.
+            </p>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="text-sm font-medium text-brand-dark hover:underline whitespace-nowrap"
+            >
+              Descartar borrador
+            </button>
+          </div>
+        )}
 
         <form onSubmit={submit} className="space-y-5">
           {/* Información principal */}
@@ -220,7 +307,11 @@ export default function WorkOrderCreatePage() {
             <h2 className="text-base font-semibold text-text-primary mb-4">Asignación y programación</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldWrap label="Cliente" htmlFor="clientId">
+                <FieldWrap
+                  label="Cliente"
+                  htmlFor="clientId"
+                  action={<CreateLink to="/clients">Crear cliente</CreateLink>}
+                >
                   <div className="relative">
                     <select
                       id="clientId"
@@ -240,7 +331,11 @@ export default function WorkOrderCreatePage() {
                   </div>
                 </FieldWrap>
 
-                <FieldWrap label="Cuadrilla" htmlFor="crewId">
+                <FieldWrap
+                  label="Cuadrilla"
+                  htmlFor="crewId"
+                  action={<CreateLink to="/crews">Crear cuadrilla</CreateLink>}
+                >
                   <div className="relative">
                     <select
                       id="crewId"
@@ -262,7 +357,11 @@ export default function WorkOrderCreatePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldWrap label="Ubicación" htmlFor="locationId">
+                <FieldWrap
+                  label="Ubicación"
+                  htmlFor="locationId"
+                  action={<CreateLink to="/locations">Crear ubicación</CreateLink>}
+                >
                   <div className="relative">
                     <select
                       id="locationId"
@@ -282,7 +381,11 @@ export default function WorkOrderCreatePage() {
                   </div>
                 </FieldWrap>
 
-                <FieldWrap label="Contrato" htmlFor="contractId">
+                <FieldWrap
+                  label="Contrato"
+                  htmlFor="contractId"
+                  action={<CreateLink to="/contracts">Crear contrato</CreateLink>}
+                >
                   <div className="relative">
                     <select
                       id="contractId"
@@ -383,13 +486,18 @@ export default function WorkOrderCreatePage() {
 
           {error && <p className="text-sm text-red-500 text-right">{error}</p>}
 
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" size="lg" onClick={() => navigate('/work-orders')}>
-              Cancelar
-            </Button>
-            <Button type="submit" size="lg" disabled={saving}>
-              {saving ? 'Creando...' : 'Crear orden de trabajo'}
-            </Button>
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <p className="text-xs text-text-muted">
+              Se guarda un borrador automáticamente mientras completás.
+            </p>
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="secondary" size="lg" onClick={() => navigate('/work-orders')}>
+                Cancelar
+              </Button>
+              <Button type="submit" size="lg" disabled={saving}>
+                {saving ? 'Creando...' : 'Crear orden de trabajo'}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
