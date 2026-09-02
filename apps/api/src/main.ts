@@ -18,14 +18,21 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const nodeEnv = configService.get('NODE_ENV', 'development');
   const allowedOrigins = configService.get('ALLOWED_ORIGINS', 'http://localhost:5173').split(',');
+  // CSP: helmet fusiona estas directivas con sus defaults, así que declarar una
+  // la reemplaza entera. 'styleSrc' sin la hoja de Google Fonts bloqueaba la
+  // tipografía de la app; 'fontSrc' y 'connectSrc' van explícitos para no
+  // depender del default de helmet, que abre 'https:' completo.
   app.use(helmet({
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: {
+      useDefaults: true,
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
         imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
       },
     },
   }));
